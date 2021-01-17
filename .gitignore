@@ -1,0 +1,7 @@
+/venv
+.idea
+main.py
+.csv
+/parsestores/parsestores/z_test_area.py
+/parsestores/parsestores/api_zenscrape.py
+/parsestores/parsestores/settings.py
