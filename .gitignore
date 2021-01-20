@@ -1,7 +1,7 @@
-/venv
-.idea
+*/venv
+*.idea
 main.py
-.csv
+*.csv
 /parsestores/parsestores/z_test_area.py
 /parsestores/parsestores/api_zenscrape.py
 /parsestores/parsestores/settings.py

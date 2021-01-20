@@ -5,7 +5,7 @@ from ..items import ParsestoresItem
 from ..api_zenscrape import _api_zenscrape, _get_url_from_api
 
 # CHECK SHOP =====================
-from ..shops.jogdog import *
+from ..shops.macys import *
 # ================================
 
 
@@ -33,7 +33,7 @@ class AaaSpider(scrapy.Spider):
                 # print(f'start: {url}')
                 yield scrapy.Request(url=_api_zenscrape(url=url,
                                                         with_proxy=self.proxy_marker),
-                                     callback=self.cat1_disp,
+                                     callback=self.cat_disp,
                                      dont_filter=True,
                                      meta={
                                          'gender': gender,
@@ -59,34 +59,28 @@ class AaaSpider(scrapy.Spider):
         url_s = urlsplit(response_url)
         base_url = f'{url_s.scheme}://{url_s.netloc}'
 
-        # Meta data
-        gender = response.meta['gender']
-        category = response.meta['category']
-
         tree = html.fromstring(response.text)
 
-        c = 0
         for ht in find_cat1_with_title(tree, response_url):
-            c += 1
-            # pprint(ht)
-
             # Create deep url
-            deep_url = f'{base_url}{ht[0]}'  # ! for href !
-            # deep_url = ht[0]  # ! for url !
+            if url_s.scheme in ht[0]:
+                deep_url = ht[0]
+            else:
+                deep_url = f'{base_url}{ht[0]}'
 
             yield scrapy.Request(url=_api_zenscrape(url=deep_url,
                                                     with_proxy=self.proxy_marker),
-                                 callback=self.parse,
+                                 callback=self.cat1_disp,
                                  dont_filter=True,
                                  meta={
-                                     'gender': gender,
+                                     'gender': response.meta['gender'],
                                      'category': ht[1],
                                      'category_1': ht[2],
-                                     'category_2': ht[3],
+                                     'category_2': ht[2],
                                      'first_page': True
                                  })
             # TEST ===========
-            if self.test and c > 1:
+            if self.test:
                 break
             # ================
 
@@ -94,14 +88,12 @@ class AaaSpider(scrapy.Spider):
         response_url = _get_url_from_api(response_url=response.url,
                                          with_proxy=self.proxy_marker)
         # print(response_url)
+        category = response.meta['category']
+        category_1 = response.meta['category_1']
 
         # Base url
         url_s = urlsplit(response_url)
         base_url = f'{url_s.scheme}://{url_s.netloc}'
-
-        # Meta data
-        gender = response.meta['gender']
-        category = response.meta['category']
 
         tree = html.fromstring(response.text)
 
@@ -109,20 +101,21 @@ class AaaSpider(scrapy.Spider):
 
         for ht in find_cat1_with_title(tree, response_url):
             # pprint(ht)
-
             # Create deep url
-            deep_url = f'{base_url}{ht[0]}'  # ! for href !
-            # deep_url = ht[0]  # ! for url !
+            if url_s.scheme in ht[0]:
+                deep_url = ht[0]
+            else:
+                deep_url = f'{base_url}{ht[0]}'
 
             yield scrapy.Request(url=_api_zenscrape(url=deep_url,
                                                     with_proxy=self.proxy_marker),
-                                 callback=self.parse,
+                                 callback=self.cat2_disp,
                                  dont_filter=True,
                                  meta={
-                                     'gender': gender,
-                                     'category': category,
+                                     'gender': response.meta['gender'],
+                                     'category': f'{category} - {category_1}',
                                      'category_1': ht[1],
-                                     'category_2': ht[1],
+                                     'category_2': ht[-1],
                                      'first_page': True
                                  })
             not_category_1 = False
@@ -131,18 +124,18 @@ class AaaSpider(scrapy.Spider):
                 break
             # ================
 
-        # if not_category_1:
-        #     yield scrapy.Request(url=_api_zenscrape(url=response_url,
-        #                                             with_proxy=self.proxy_marker),
-        #                          callback=self.parse,
-        #                          dont_filter=True,
-        #                          meta={
-        #                              'gender': gender,
-        #                              'category': category,
-        #                              'category_1': category,
-        #                              'category_2': category,
-        #                              'first_page': True
-        #                          })
+        if not_category_1:
+            yield scrapy.Request(url=_api_zenscrape(url=response_url,
+                                                    with_proxy=self.proxy_marker),
+                                 callback=self.cat2_disp,
+                                 dont_filter=True,
+                                 meta={
+                                     'gender': response.meta['gender'],
+                                     'category': response.meta['category'],
+                                     'category_1': response.meta['category_1'],
+                                     'category_2': response.meta['category_2'],
+                                     'first_page': True
+                                 })
 
     def cat2_disp(self, response):
         # print(response.url)
@@ -154,9 +147,9 @@ class AaaSpider(scrapy.Spider):
         base_url = f'{url_s.scheme}://{url_s.netloc}'
 
         # Meta data
-        gender = response.meta['gender']
         category = response.meta['category']
         category_1 = response.meta['category_1']
+        category_2 = response.meta['category_2']
 
         tree = html.fromstring(response.text)
 
@@ -165,19 +158,31 @@ class AaaSpider(scrapy.Spider):
         for ht in find_cat2_with_title(tree, response_url):
             # pprint(ht)
             # Create deep url
-            # deep_url = f'{base_url}{ht[0]}'  # ! for href !
-            deep_url = ht[0]  # ! for url !
-            # print(deep_url, ht[1])
+            if url_s.scheme in ht[0]:
+                deep_url = ht[0]
+            else:
+                deep_url = f'{base_url}{ht[0]}'
+
+            deep_url = preparation_url(deep_url)
+
+            if category_1 != category_2:
+                category_copy = f'{category} - {category_1}'
+                category_1_copy = category_2
+            else:
+                category_copy = category
+                category_1_copy = category_1
+
+            category_2_copy = ht[1]
 
             yield scrapy.Request(url=_api_zenscrape(url=deep_url,
                                                     with_proxy=self.proxy_marker),
                                  callback=self.parse,
                                  dont_filter=True,
                                  meta={
-                                     'gender': gender,
-                                     'category': category,
-                                     'category_1': category_1,
-                                     'category_2': ht[1].strip(),
+                                     'gender': response.meta['gender'],
+                                     'category': category_copy,
+                                     'category_1': category_1_copy,
+                                     'category_2': category_2_copy,
                                      'first_page': True
                                  })
             not_category_2 = False
@@ -188,15 +193,16 @@ class AaaSpider(scrapy.Spider):
             # ================
 
         if not_category_2:
+            response_url = preparation_url(response_url)
             yield scrapy.Request(url=_api_zenscrape(url=response_url,
                                                     with_proxy=self.proxy_marker),
                                  callback=self.parse,
                                  dont_filter=True,
                                  meta={
-                                     'gender': gender,
+                                     'gender': response.meta['gender'],
                                      'category': category,
                                      'category_1': category_1,
-                                     'category_2': category_1,
+                                     'category_2': category_2,
                                      'first_page': True
                                  })
 
@@ -216,6 +222,7 @@ class AaaSpider(scrapy.Spider):
         category_2 = response.meta['category_2']
         first_page = response.meta['first_page']
         # print(gender, category, category_1, category_2, first_page)
+        # return
 
         tree = html.fromstring(response.text)
 
