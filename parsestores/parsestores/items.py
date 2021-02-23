@@ -18,3 +18,8 @@ class ParsestoresItem(scrapy.Item):
     brand = scrapy.Field()
     gender = scrapy.Field()
     site_name = scrapy.Field()
+
+class ParseGlamItem(scrapy.Item):
+    brand = scrapy.Field()
+    shop = scrapy.Field()
+    count = scrapy.Field()
